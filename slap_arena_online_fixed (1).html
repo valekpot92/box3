@@ -1,0 +1,2759 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Пощёчины — Арена</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #0a0a15;
+    font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', Arial, sans-serif;
+    touch-action: manipulation;
+  }
+  #game {
+    position: relative; width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ===== ГЛАВНОЕ МЕНЮ ===== */
+  #mainMenu {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 40%, #2a1a4a 0%, #0a0a15 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 200; gap: 14px; padding: 20px;
+    overflow-y: auto;
+  }
+  #mainMenu::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,200,100,0.15) 0%, transparent 30%),
+      radial-gradient(circle at 80% 70%, rgba(120,180,255,0.12) 0%, transparent 30%);
+    pointer-events: none;
+  }
+  #mainMenu h1 {
+    font-size: clamp(32px, 8vw, 62px);
+    background: linear-gradient(180deg, #ffd54f, #f39c12);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 6px 16px rgba(255,213,79,0.5));
+    letter-spacing: 4px;
+    text-align: center;
+    z-index: 1;
+    margin-bottom: 6px;
+  }
+  #mainMenu .subtitle {
+    color: rgba(255,255,255,0.7);
+    font-size: 13px; letter-spacing: 3px;
+    margin-bottom: 16px;
+    z-index: 1;
+    text-align: center;
+  }
+  .menu-btn {
+    width: 100%; max-width: 340px;
+    padding: 16px 22px;
+    font-size: 17px; font-weight: bold;
+    color: #fff;
+    background: linear-gradient(180deg, #e74c3c, #a03020);
+    border: 3px solid #2a1a0e;
+    border-radius: 16px;
+    box-shadow: 0 6px 0 #6b1a10, 0 10px 22px rgba(231,76,60,0.5);
+    cursor: pointer;
+    transition: transform 0.08s, box-shadow 0.08s;
+    letter-spacing: 1.5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    font-family: inherit;
+    z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px;
+  }
+  .menu-btn.blue {
+    background: linear-gradient(180deg, #3498db, #2471a3);
+    box-shadow: 0 6px 0 #1a3a5a, 0 10px 22px rgba(52,152,219,0.5);
+  }
+  .menu-btn.green {
+    background: linear-gradient(180deg, #27ae60, #1e8449);
+    box-shadow: 0 6px 0 #145a32, 0 10px 22px rgba(39,174,96,0.5);
+  }
+  .menu-btn.purple {
+    background: linear-gradient(180deg, #9b59b6, #6c3483);
+    box-shadow: 0 6px 0 #4a1d5e, 0 10px 22px rgba(155,89,182,0.5);
+  }
+  .menu-btn:active:not(:disabled) {
+    transform: translateY(5px);
+    box-shadow: 0 1px 0 #6b1a10, 0 3px 8px rgba(0,0,0,0.4);
+  }
+  .menu-btn:disabled {
+    opacity: 0.5; cursor: not-allowed;
+  }
+
+  /* ===== МОДАЛЬНОЕ ОКНО ДЛЯ ONLINE ===== */
+  #onlineModal {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 210;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  #onlineModal.show { display: flex; }
+  #onlineBox {
+    background: linear-gradient(180deg, #2a1a4a, #1a0a2a);
+    border: 3px solid #ffd54f;
+    border-radius: 20px;
+    padding: 20px;
+    width: 100%; max-width: 440px;
+    color: #fff;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    text-align: center;
+    margin: auto;
+  }
+  #onlineBox h2 {
+    font-size: 20px;
+    color: #ffd54f;
+    margin-bottom: 14px;
+    letter-spacing: 2px;
+  }
+  #onlineBox p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  #roomCodeInput {
+    width: 100%;
+    padding: 14px;
+    font-size: 20px;
+    text-align: center;
+    letter-spacing: 4px;
+    font-weight: bold;
+    border-radius: 12px;
+    border: 3px solid #ffd54f;
+    background: rgba(0,0,0,0.4);
+    color: #fff;
+    font-family: 'Arial Black', monospace;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    outline: none;
+  }
+  #roomCodeInput:focus {
+    border-color: #fff;
+    box-shadow: 0 0 20px rgba(255,213,79,0.5);
+  }
+  #myCodeDisplay {
+    font-size: 30px;
+    font-weight: bold;
+    color: #ffd54f;
+    letter-spacing: 6px;
+    padding: 12px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 12px;
+    margin: 10px 0;
+    font-family: 'Arial Black', monospace;
+    text-shadow: 0 0 20px rgba(255,213,79,0.8);
+    animation: codePulse 2s ease-in-out infinite;
+    word-break: break-all;
+  }
+  @keyframes codePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+  }
+  #shareLinkBox {
+    width: 100%;
+    padding: 10px;
+    font-size: 11px;
+    background: rgba(0,0,0,0.4);
+    border: 2px solid rgba(255,213,79,0.4);
+    border-radius: 10px;
+    color: #5dade2;
+    word-break: break-all;
+    margin: 8px 0;
+    cursor: pointer;
+    user-select: all;
+    font-family: monospace;
+  }
+  #shareLinkBox:hover {
+    border-color: #ffd54f;
+  }
+  #onlineBox .row {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  #onlineBox .row .menu-btn {
+    flex: 1; padding: 12px; font-size: 14px;
+  }
+  #onlineStatus {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #5dade2;
+    min-height: 16px;
+    line-height: 1.4;
+  }
+  #onlineStatus.error { color: #ff6b5b; }
+  #onlineStatus.ok { color: #2ecc71; }
+
+  /* Спиннер загрузки */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #ffd54f;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ===== АРЕНА ===== */
+  #scene {
+    position: relative; flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1a1a3a 0%, #2a1a4a 40%, #1a0a2a 100%);
+  }
+  #spotlights {
+    position: absolute; top: -5%; left: 0; right: 0;
+    height: 80%; pointer-events: none; z-index: 2;
+  }
+  .spotlight {
+    position: absolute; top: 0;
+    width: 200px; height: 100%;
+    background: linear-gradient(180deg, rgba(255,220,150,0.35) 0%, rgba(255,200,100,0.15) 40%, transparent 100%);
+    transform-origin: top center;
+    filter: blur(20px);
+    animation: sway 6s ease-in-out infinite;
+  }
+  .spotlight.s1 { left: 8%; }
+  .spotlight.s2 { left: 32%; animation-delay: -1.5s; }
+  .spotlight.s3 { left: 58%; animation-delay: -3s; }
+  .spotlight.s4 { left: 82%; animation-delay: -4.5s; }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-6deg); opacity: 0.85; }
+    50% { transform: rotate(6deg); opacity: 1; }
+  }
+  #stage-back {
+    position: absolute; bottom: 22%; left: 0; right: 0;
+    height: 40%;
+    background:
+      radial-gradient(ellipse at 50% 100%, rgba(120,60,180,0.4) 0%, transparent 70%),
+      linear-gradient(180deg, rgba(60,30,90,0.6) 0%, rgba(30,10,50,0.9) 100%);
+    z-index: 1;
+  }
+  #stands {
+    position: absolute; top: 6%; left: 0; right: 0;
+    height: 34%; z-index: 3; overflow: hidden;
+    perspective: 600px;
+  }
+  .stand-row {
+    display: flex; justify-content: center;
+    align-items: flex-end; gap: 3px;
+    height: 33%; margin-bottom: 1px;
+    transform-style: preserve-3d;
+  }
+  .fan {
+    position: relative; width: 32px; height: 32px;
+    flex-shrink: 0;
+    animation: fanBob 2.5s ease-in-out infinite;
+  }
+  .fan .fan-body {
+    position: absolute; bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 22px; height: 14px;
+    border-radius: 6px 6px 4px 4px;
+    background: var(--c-body, #e74c3c);
+  }
+  .fan .fan-head {
+    position: absolute; bottom: 11px; left: 50%;
+    transform: translateX(-50%);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--c-skin, #f4c39a);
+    border: 1.5px solid rgba(0,0,0,0.25);
+  }
+  .fan .fan-hair {
+    position: absolute; bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    width: 20px; height: 9px;
+    border-radius: 50% 50% 20% 20%;
+    background: var(--c-hair, #2a1a0e);
+    z-index: 2;
+  }
+  .fan .fan-eye {
+    position: absolute; bottom: 18px;
+    width: 3px; height: 3px;
+    background: #222; border-radius: 50%;
+  }
+  .fan .fan-eye.left  { left: 50%; margin-left: -5px; }
+  .fan .fan-eye.right { left: 50%; margin-left: 2px; }
+  .fan .fan-mouth {
+    position: absolute; bottom: 14px; left: 50%;
+    transform: translateX(-50%);
+    width: 5px; height: 3px;
+    background: #8b3a3a;
+    border-radius: 0 0 4px 4px;
+  }
+  .fan .fan-hand {
+    position: absolute; bottom: 6px;
+    width: 5px; height: 6px;
+    background: var(--c-skin, #f4c39a);
+    border-radius: 40%;
+    animation: clap 0.8s ease-in-out infinite;
+  }
+  .fan .fan-hand.left  { left: calc(50% - 14px); }
+  .fan .fan-hand.right { left: calc(50% + 9px); animation-delay: -0.05s; }
+  @keyframes fanBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  @keyframes clap {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-3px) rotate(-15deg); }
+  }
+  .stand-row.back .fan { filter: brightness(0.55) blur(0.6px); }
+  .stand-row.mid  .fan { filter: brightness(0.78) blur(0.3px); }
+  .stand-row.front .fan { filter: brightness(1); }
+
+  #banner {
+    position: absolute; top: 2%; left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 28px;
+    background: linear-gradient(180deg, #ffd54f, #f39c12);
+    color: #7b241c;
+    font-weight: bold;
+    font-size: 18px; letter-spacing: 3px;
+    border-radius: 6px;
+    border: 3px solid #7b241c;
+    box-shadow: 0 4px 0 #7b241c, 0 8px 20px rgba(0,0,0,0.5);
+    z-index: 5;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+    animation: bannerPulse 3s ease-in-out infinite;
+  }
+  @keyframes bannerPulse {
+    0%, 100% { transform: translateX(-50%) scale(1); }
+    50% { transform: translateX(-50%) scale(1.03); }
+  }
+
+  #stage-haze {
+    position: absolute; bottom: 22%; left: 0; right: 0;
+    height: 30%;
+    background: linear-gradient(180deg, transparent 0%, rgba(40,10,60,0.6) 100%);
+    z-index: 4; pointer-events: none;
+  }
+
+  #opponent {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+    transform: translateY(-12%);
+    z-index: 10;
+    transition: transform 0.15s;
+  }
+  #opponentWrap {
+    position: relative;
+    width: min(60vw, 380px);
+    height: min(60vw, 380px);
+    max-height: 40vh;
+    z-index: 8;
+    filter: drop-shadow(0 12px 24px rgba(0,0,0,0.55));
+    margin-bottom: -8%;
+  }
+  .opponent-head {
+    position: relative;
+    width: 100%; height: 100%;
+    border-radius: 50% 50% 46% 46%;
+    background: radial-gradient(ellipse at 35% 28%, #ffe0bd 0%, #f4c39a 40%, #d9a878 75%, #b88860 100%);
+    border: 5px solid #2a1a0e;
+    overflow: hidden;
+    box-shadow:
+      inset -30px -25px 60px rgba(0,0,0,0.15),
+      inset 25px 20px 50px rgba(255,255,255,0.15);
+    transition: transform 0.1s;
+  }
+  .hair {
+    position: absolute;
+    top: -10px; left: 50%;
+    transform: translateX(-50%);
+    width: 94%; height: 42%;
+    background: radial-gradient(ellipse at 50% 100%, #4a2a1a 0%, #2a1a0e 60%, #1a0f08 100%);
+    border-radius: 50% 50% 40% 40% / 80% 80% 30% 30%;
+    z-index: 3;
+  }
+  .hair::after {
+    content: '';
+    position: absolute;
+    bottom: -6px; left: 10%; right: 10%;
+    height: 14px;
+    background:
+      radial-gradient(circle at 15% 50%, #4a2a1a 0%, transparent 30%),
+      radial-gradient(circle at 40% 40%, #4a2a1a 0%, transparent 28%),
+      radial-gradient(circle at 65% 50%, #4a2a1a 0%, transparent 30%),
+      radial-gradient(circle at 88% 45%, #4a2a1a 0%, transparent 25%);
+  }
+  .eye {
+    position: absolute;
+    width: 16%; height: 16%;
+    background: #fff;
+    border-radius: 50%;
+    top: 38%; z-index: 5;
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.3);
+    border: 2.5px solid #2a1a0e;
+    transition: all 0.2s;
+    overflow: hidden;
+  }
+  .eye.left  { left: 19%; }
+  .eye.right { right: 19%; }
+  .pupil {
+    position: absolute;
+    width: 55%; height: 55%;
+    background: radial-gradient(circle at 40% 35%, #4a3520 0%, #1a0f08 100%);
+    border-radius: 50%;
+    top: 22%; left: 22%;
+    transition: all 0.2s;
+  }
+  .pupil::after {
+    content: '';
+    position: absolute;
+    width: 38%; height: 38%;
+    background: #fff; border-radius: 50%;
+    top: 10%; left: 12%;
+    opacity: 0.95;
+  }
+  .eye.closed {
+    height: 3%; top: 46%;
+    border-radius: 2px;
+    background: #2a1a0e;
+    box-shadow: none;
+  }
+  .eye.closed .pupil { display: none; }
+  .eyelid {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 0%;
+    background: #e8b890;
+    z-index: 6;
+    transition: height 0.15s;
+  }
+  .eye.squint .eyelid { height: 45%; }
+  .brow {
+    position: absolute;
+    width: 24%; height: 4.5%;
+    background: #2a1a0e;
+    border-radius: 6px;
+    top: 29%; z-index: 6;
+    transition: all 0.25s;
+  }
+  .brow.left  { left: 14%; transform: rotate(-10deg); }
+  .brow.right { right: 14%; transform: rotate(10deg); }
+  .brow.angry.left  { transform: rotate(20deg) translateY(4px); }
+  .brow.angry.right { transform: rotate(-20deg) translateY(4px); }
+  .nose {
+    position: absolute;
+    width: 15%; height: 22%;
+    top: 45%; left: 50%;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at 50% 30%, #e8b890 0%, #d9a878 70%, #b88860 100%);
+    border-radius: 45% 45% 50% 50%;
+    border: 2.5px solid #a87850;
+    box-shadow:
+      inset -4px -3px 8px rgba(0,0,0,0.18),
+      inset 3px 2px 6px rgba(255,255,255,0.2);
+    z-index: 4;
+  }
+  .nose::after {
+    content: '';
+    position: absolute;
+    bottom: 14%; left: 18%; right: 18%;
+    height: 12%;
+    background: rgba(0,0,0,0.25);
+    border-radius: 50%;
+    filter: blur(1.5px);
+  }
+  .mouth {
+    position: absolute;
+    bottom: 20%; left: 50%;
+    transform: translateX(-50%);
+    width: 28%; height: 7%;
+    background: linear-gradient(180deg, #7b1f1f 0%, #4a1010 100%);
+    border-radius: 8% 8% 50% 50% / 8% 8% 100% 100%;
+    z-index: 4;
+    border: 2.5px solid #2a1a0e;
+    transition: all 0.25s;
+    box-shadow: inset 0 -3px 6px rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+  .mouth.open { height: 20%; border-radius: 50%; width: 24%; }
+  .mouth .teeth {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 45%;
+    background: linear-gradient(180deg, #fff 0%, #e8e0d0 100%);
+    border-radius: 2px;
+  }
+  .mouth .teeth::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: rgba(0,0,0,0.15);
+    background-image: linear-gradient(90deg, transparent 18%, rgba(0,0,0,0.3) 18%, rgba(0,0,0,0.3) 20%, transparent 20%, transparent 38%, rgba(0,0,0,0.3) 38%, rgba(0,0,0,0.3) 40%, transparent 40%, transparent 58%, rgba(0,0,0,0.3) 58%, rgba(0,0,0,0.3) 60%, transparent 60%, transparent 78%, rgba(0,0,0,0.3) 78%, rgba(0,0,0,0.3) 80%, transparent 80%);
+  }
+  .mouth .teeth-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 30%;
+    background: linear-gradient(0deg, #f0e8d0 0%, #e8e0d0 100%);
+    border-radius: 2px;
+  }
+  .mouth:not(.open) .teeth-bottom { display: none; }
+  .cheek {
+    position: absolute;
+    width: 22%; height: 16%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(230,110,110,0.4) 0%, transparent 70%);
+    top: 52%; z-index: 3;
+    transition: opacity 0.3s;
+  }
+  .cheek.left  { left: 4%; }
+  .cheek.right { right: 4%; }
+  .cheek.hit { opacity: 1; background: radial-gradient(circle, rgba(230,80,80,0.75) 0%, transparent 70%); }
+  .bruise {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, #7b2fa0 0%, #4a1d6e 45%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+    z-index: 7;
+    mix-blend-mode: multiply;
+    filter: blur(2px);
+  }
+  .bruise.show { opacity: 0.85; }
+  .swell {
+    position: absolute;
+    background: radial-gradient(circle, rgba(220,120,120,0.7) 0%, rgba(200,90,90,0.35) 50%, transparent 80%);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+    z-index: 6;
+    filter: blur(4px);
+  }
+  .swell.show { opacity: 0.9; }
+  .blood {
+    position: absolute;
+    background: linear-gradient(180deg, #c0392b 0%, #7b241c 100%);
+    border-radius: 0 0 45% 45%;
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+    z-index: 8;
+    box-shadow: 0 0 6px rgba(192,57,43,0.5);
+    border: 2px solid #4a1010;
+  }
+  .blood.show { opacity: 0.95; }
+  .blood-drip {
+    position: absolute;
+    width: 4px;
+    background: linear-gradient(180deg, #c0392b, #7b241c);
+    border-radius: 0 0 50% 50%;
+    opacity: 0;
+    z-index: 8;
+    animation: drip 3s ease-in infinite;
+    border: 1px solid #4a1010;
+  }
+  .blood-drip.show { opacity: 0.9; }
+  @keyframes drip {
+    0% { height: 0; top: 0; }
+    60% { height: 45px; top: 0; }
+    100% { height: 70px; top: 25px; opacity: 0.4; }
+  }
+  .op-neck {
+    width: min(13vw, 76px);
+    height: min(4.5vw, 30px);
+    background: linear-gradient(180deg, #e8b890 0%, #d9a878 70%, #b88860 100%);
+    border: 4px solid #2a1a0e;
+    border-radius: 10px 10px 4px 4px;
+    z-index: 7;
+    margin-top: -6px;
+    box-shadow: inset -8px -4px 12px rgba(0,0,0,0.2);
+  }
+  .op-torso {
+    position: relative;
+    width: min(58vw, 340px);
+    height: min(18vw, 110px);
+    background: linear-gradient(180deg, #e74c3c 0%, #c0392b 50%, #7b241c 100%);
+    border: 5px solid #2a1a0e;
+    border-radius: 45% 45% 12% 12% / 48% 48% 15% 15%;
+    z-index: 6;
+    margin-top: -4px;
+    box-shadow:
+      inset 0 -25px 35px rgba(0,0,0,0.45),
+      inset 0 20px 30px rgba(255,150,120,0.2);
+    overflow: hidden;
+  }
+  .op-torso::after {
+    content: '1';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -40%);
+    font-family: 'Arial Black', sans-serif;
+    font-size: min(9vw, 60px);
+    font-weight: 900;
+    color: rgba(255,255,255,0.85);
+    text-shadow: 0 3px 0 rgba(0,0,0,0.3);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .op-torso::before {
+    content: '';
+    position: absolute;
+    top: -6px; left: 50%;
+    transform: translateX(-50%);
+    width: 38%; height: 30%;
+    background: linear-gradient(180deg, #f05a4a 0%, #c0392b 100%);
+    border-radius: 0 0 60% 60% / 0 0 80% 80%;
+    z-index: 1;
+  }
+  .op-arm-left, .op-arm-right {
+    position: absolute;
+    bottom: 0;
+    width: min(20vw, 130px);
+    height: min(9vw, 55px);
+    background: linear-gradient(180deg, #e74c3c 0%, #c0392b 60%, #7b241c 100%);
+    border: 4px solid #2a1a0e;
+    z-index: 10;
+    transition: transform 0.35s cubic-bezier(0.5, 0, 0.3, 1), bottom 0.3s;
+  }
+  .op-arm-left {
+    left: -8%;
+    border-radius: 40% 20% 20% 40% / 60% 40% 40% 60%;
+    transform: rotate(-8deg);
+  }
+  .op-arm-right {
+    right: -8%;
+    border-radius: 20% 40% 40% 20% / 40% 60% 60% 40%;
+    transform: rotate(8deg);
+  }
+  .op-hand {
+    position: absolute;
+    bottom: -4px;
+    width: min(16vw, 100px);
+    height: min(10vw, 60px);
+    background: radial-gradient(ellipse at 50% 40%, #ffe0bd 0%, #e8b890 55%, #c99a72 100%);
+    border: 4px solid #2a1a0e;
+    border-radius: 45% 45% 42% 42% / 50% 50% 48% 48%;
+    box-shadow:
+      inset -8px -6px 14px rgba(0,0,0,0.22),
+      inset 6px 4px 10px rgba(255,255,255,0.18),
+      0 4px 12px rgba(0,0,0,0.3);
+    z-index: 12;
+    transition: transform 0.35s cubic-bezier(0.5, 0, 0.3, 1), bottom 0.35s, opacity 0.25s;
+  }
+  .op-hand.left  { left: -10%; transform: rotate(-10deg); }
+  .op-hand.right { right: -10%; transform: rotate(10deg); }
+  .op-finger {
+    position: absolute;
+    top: 55%;
+    width: 20%;
+    height: 38%;
+    background: linear-gradient(180deg, #ffe0bd, #c99a72);
+    border: 2.5px solid #2a1a0e;
+    border-radius: 6px;
+    transform-origin: top center;
+  }
+  .op-finger.f1 { left: 8%; height: 32%; transform: rotate(-4deg); }
+  .op-finger.f2 { left: 30%; height: 38%; transform: rotate(-2deg); }
+  .op-finger.f3 { left: 52%; height: 36%; transform: rotate(2deg); }
+  .op-finger.f4 { left: 74%; height: 28%; transform: rotate(6deg); }
+  #table {
+    position: absolute;
+    bottom: 0; left: -5%; right: -5%;
+    height: 22%;
+    background: linear-gradient(180deg, #8a6a3a 0%, #6a4a2a 40%, #3a2410 100%);
+    border-top: 8px solid #a87a4a;
+    z-index: 15;
+    box-shadow:
+      0 -30px 60px rgba(0,0,0,0.75),
+      inset 0 12px 24px rgba(0,0,0,0.5),
+      inset 0 -6px 16px rgba(255,180,100,0.15);
+    transform: perspective(500px) rotateX(28deg);
+    transform-origin: bottom center;
+  }
+  #table::before {
+    content: '';
+    position: absolute;
+    top: 8px; left: 0; right: 0;
+    height: 10px;
+    background: linear-gradient(180deg, rgba(255,220,150,0.4), transparent);
+    filter: blur(5px);
+  }
+  #table::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(90deg, transparent 20%, rgba(0,0,0,0.15) 20.5%, transparent 21%),
+      linear-gradient(90deg, transparent 60%, rgba(0,0,0,0.12) 60.5%, transparent 61%),
+      radial-gradient(ellipse at 25% 20%, rgba(255,200,120,0.18) 0%, transparent 45%),
+      radial-gradient(ellipse at 75% 30%, rgba(255,180,100,0.12) 0%, transparent 45%);
+    pointer-events: none;
+  }
+  #myHands {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 24%;
+    z-index: 16;
+    pointer-events: none;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 4%;
+    align-items: flex-end;
+  }
+  .my-hand-rest {
+    position: relative;
+    width: min(24vw, 160px);
+    height: min(15vw, 105px);
+    background: radial-gradient(ellipse at 50% 40%, #ffe0bd 0%, #e8b890 50%, #c99a72 100%);
+    border: 4px solid #2a1a0e;
+    border-radius: 46% 46% 44% 44% / 45% 45% 52% 52%;
+    box-shadow:
+      inset -10px -8px 18px rgba(0,0,0,0.22),
+      inset 8px 6px 14px rgba(255,255,255,0.2),
+      0 -8px 24px rgba(0,0,0,0.4);
+    transform: rotate(-3deg) translateY(28%);
+    transition: transform 0.4s cubic-bezier(0.5, 0, 0.3, 1), opacity 0.3s;
+  }
+  .my-hand-rest.right { transform: rotate(3deg) translateY(28%); }
+  .my-finger {
+    position: absolute;
+    top: -62%;
+    width: 19%;
+    height: 62%;
+    background: linear-gradient(180deg, #ffe0bd 0%, #e8b890 50%, #c99a72 100%);
+    border: 2.5px solid #2a1a0e;
+    border-radius: 12px 12px 6px 6px;
+    box-shadow: inset -3px 0 6px rgba(0,0,0,0.15);
+    transform-origin: bottom center;
+  }
+  .my-finger.f1 { left: 8%;  height: 50%; top: -50%; transform: rotate(-4deg); }
+  .my-finger.f2 { left: 28%; height: 60%; top: -60%; transform: rotate(-1deg); }
+  .my-finger.f3 { left: 48%; height: 58%; top: -58%; transform: rotate(1deg); }
+  .my-finger.f4 { left: 68%; height: 48%; top: -48%; transform: rotate(4deg); }
+  #myHands.punching .my-hand-rest.right {
+    transform: rotate(3deg) translateY(-120%) translateX(-30%) scale(0.9);
+    opacity: 0;
+  }
+  #myArm {
+    position: absolute;
+    bottom: 15%;
+    right: -18%;
+    width: 50vw;
+    max-width: 420px;
+    height: 130px;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transform-origin: right center;
+    filter: drop-shadow(0 14px 28px rgba(0,0,0,0.65));
+  }
+  .arm-forearm {
+    position: absolute;
+    right: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 100%; height: 55%;
+    background: linear-gradient(180deg, #f4c39a 0%, #e8b890 60%, #c99a72 100%);
+    border: 4px solid #2a1a0e;
+    border-radius: 55px 10px 10px 55px;
+    box-shadow: inset 0 -12px 20px rgba(0,0,0,0.2), inset 0 10px 16px rgba(255,255,255,0.22);
+  }
+  .arm-sleeve {
+    position: absolute;
+    right: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 40%; height: 64%;
+    background: linear-gradient(180deg, #3498db 0%, #2471a3 100%);
+    border: 4px solid #1a3a5a;
+    border-radius: 55px 10px 10px 55px;
+    box-shadow: inset 0 -8px 14px rgba(0,0,0,0.4);
+  }
+  .arm-hand {
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 22%; height: 100%;
+    background: radial-gradient(ellipse at 45% 42%, #ffe0bd 0%, #e8b890 50%, #c99a72 100%);
+    border: 4px solid #2a1a0e;
+    border-radius: 42% 55% 55% 42% / 48% 55% 55% 48%;
+    box-shadow: inset -10px -6px 14px rgba(0,0,0,0.22);
+  }
+  .arm-finger {
+    position: absolute;
+    background: linear-gradient(180deg, #ffe0bd, #c99a72);
+    border: 3px solid #2a1a0e;
+    border-radius: 10px;
+    box-shadow: inset -2px 0 4px rgba(0,0,0,0.15);
+    z-index: 1;
+  }
+  .arm-finger.f1 { left: -8%; top: 16%; width: 15%; height: 22%; transform: rotate(-16deg); }
+  .arm-finger.f2 { left: -10%; top: 36%; width: 16%; height: 24%; transform: rotate(-6deg); }
+  .arm-finger.f3 { left: -10%; top: 54%; width: 16%; height: 24%; transform: rotate(4deg); }
+  .arm-finger.f4 { left: -8%; top: 72%; width: 15%; height: 20%; transform: rotate(12deg); }
+  @keyframes slapSwing {
+    0%   { opacity: 0; transform: translateX(95%) translateY(60%) rotate(-38deg) scale(0.8); }
+    12%  { opacity: 1; transform: translateX(80%) translateY(45%) rotate(-42deg) scale(0.9); }
+    30%  { opacity: 1; transform: translateX(45%) translateY(10%) rotate(-20deg) scale(1); }
+    42%  { opacity: 1; transform: translateX(8%) translateY(-22%) rotate(4deg) scale(1.06); }
+    50%  { opacity: 1; transform: translateX(-2%) translateY(-28%) rotate(8deg) scale(1.08); }
+    58%  { opacity: 1; transform: translateX(0%) translateY(-26%) rotate(6deg) scale(1.06); }
+    100% { opacity: 0; transform: translateX(35%) translateY(10%) rotate(-8deg) scale(1); }
+  }
+  #myArm.slap { animation: slapSwing 0.75s cubic-bezier(0.4, 0, 0.42, 1) forwards; }
+  #enemyArm {
+    position: absolute;
+    bottom: 18%;
+    left: -18%;
+    width: 50vw;
+    max-width: 420px;
+    height: 130px;
+    z-index: 40;
+    pointer-events: none;
+    opacity: 0;
+    transform-origin: left center;
+    filter: drop-shadow(0 14px 28px rgba(0,0,0,0.65)) scaleX(-1);
+  }
+  #enemyArm .arm-sleeve {
+    background: linear-gradient(180deg, #e74c3c 0%, #a03020 100%);
+    border-color: #2a1a0e;
+  }
+  @keyframes enemySlap {
+    0%   { opacity: 0; transform: scaleX(-1) translateX(95%) translateY(50%) rotate(-35deg); }
+    12%  { opacity: 1; transform: scaleX(-1) translateX(80%) translateY(35%) rotate(-40deg); }
+    32%  { opacity: 1; transform: scaleX(-1) translateX(45%) translateY(5%) rotate(-18deg); }
+    46%  { opacity: 1; transform: scaleX(-1) translateX(-58%) translateY(-24%) rotate(12deg) scale(1.1); }
+    58%  { opacity: 1; transform: scaleX(-1) translateX(-60%) translateY(-26%) rotate(14deg) scale(1.12); }
+    100% { opacity: 0; transform: scaleX(-1) translateX(-25%) translateY(5%) rotate(0deg) scale(1); }
+  }
+  #enemyArm.slap { animation: enemySlap 0.78s cubic-bezier(0.4, 0, 0.42, 1) forwards; }
+
+  #panel {
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 92%; max-width: 520px;
+    padding: 12px 16px;
+    background: rgba(20,10,40,0.85);
+    border-radius: 18px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 50;
+    backdrop-filter: blur(8px);
+    border: 3px solid #ffd54f;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 30px rgba(255,213,79,0.2);
+  }
+  #statusLabel {
+    color: #fff; text-align: center; font-weight: bold;
+    font-size: 15px; letter-spacing: 0.5px;
+    min-height: 20px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  }
+  #powerBar {
+    position: relative;
+    width: 100%; height: 42px;
+    background: #111;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 3px solid #2a1a0e;
+    box-shadow: inset 0 3px 8px rgba(0,0,0,0.9);
+  }
+  #powerZones { position: absolute; inset: 0; display: flex; }
+  .zone {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.95);
+    font-weight: bold; font-size: 11px;
+    text-shadow: 0 1px 3px #000;
+    letter-spacing: 0.3px;
+  }
+  .zone-weak   { background: linear-gradient(180deg,#95a5a6,#5a6668); }
+  .zone-ok     { background: linear-gradient(180deg,#2ecc71,#145a32); }
+  .zone-good   { background: linear-gradient(180deg,#f39c12,#9c640c); }
+  .zone-perfect{ background: linear-gradient(180deg,#e74c3c,#7b241c); box-shadow: inset 0 0 20px rgba(255,220,100,0.7); }
+  #marker {
+    position: absolute;
+    top: -3px; bottom: -3px;
+    width: 8px;
+    background: #fff;
+    box-shadow: 0 0 14px #fff, 0 0 28px #ffd54f;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 5;
+  }
+  #hitBtn {
+    width: 100%;
+    padding: 15px;
+    font-size: 20px; font-weight: bold;
+    color: #fff;
+    background: linear-gradient(180deg, #e74c3c, #a03020);
+    border: 3px solid #2a1a0e;
+    border-radius: 16px;
+    box-shadow: 0 6px 0 #6b1a10, 0 10px 22px rgba(231,76,60,0.5);
+    cursor: pointer;
+    transition: transform 0.08s, box-shadow 0.08s;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    font-family: inherit;
+  }
+  #hitBtn:active:not(:disabled) {
+    transform: translateY(6px);
+    box-shadow: 0 0 0 #6b1a10, 0 2px 6px rgba(0,0,0,0.4);
+  }
+  #hitBtn:disabled {
+    background: linear-gradient(180deg, #555, #333);
+    box-shadow: 0 6px 0 #1a1a1a;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  #menuBtnSmall {
+    position: absolute;
+    top: 12px; right: 12px;
+    padding: 8px 14px;
+    background: rgba(20,10,40,0.85);
+    color: #fff; font-weight: bold; font-size: 13px;
+    border: 3px solid #ffd54f;
+    border-radius: 12px;
+    cursor: pointer;
+    z-index: 50;
+    backdrop-filter: blur(4px);
+    font-family: inherit;
+    transition: transform 0.1s;
+  }
+  #menuBtnSmall:active { transform: scale(0.95); }
+
+  #overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.92);
+    display: none;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #fff; z-index: 100;
+    gap: 20px; padding: 20px; text-align: center;
+    backdrop-filter: blur(6px);
+  }
+  #overlay.show { display: flex; animation: fadeIn 0.4s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #overlay h1 {
+    font-size: clamp(28px, 7vw, 44px);
+    background: linear-gradient(180deg, #ffd54f, #f39c12);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 4px 12px rgba(255,213,79,0.5));
+  }
+  #overlay p { font-size: 16px; max-width: 420px; line-height: 1.5; opacity: 0.9; }
+  #overlay .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  #overlay button {
+    padding: 14px 28px; font-size: 15px; font-weight: bold;
+    background: linear-gradient(180deg, #27ae60, #1e8449); color: #fff;
+    border: 3px solid #2a1a0e;
+    border-radius: 14px; cursor: pointer;
+    box-shadow: 0 6px 0 #145a32, 0 10px 22px rgba(39,174,96,0.5);
+    transition: transform 0.08s;
+    font-family: inherit;
+  }
+  #overlay button.blue {
+    background: linear-gradient(180deg, #3498db, #2471a3);
+    box-shadow: 0 6px 0 #1a3a5a, 0 10px 22px rgba(52,152,219,0.5);
+  }
+  #overlay button:active { transform: translateY(5px); box-shadow: 0 1px 0 #145a32; }
+
+  #flash {
+    position: absolute; inset: 0;
+    background: #fff; opacity: 0;
+    pointer-events: none; z-index: 90;
+  }
+  #flash.on { animation: flashAnim 0.22s; }
+  @keyframes flashAnim {
+    0% { opacity: 0.85; }
+    100% { opacity: 0; }
+  }
+  #redFlash {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle, rgba(200,30,30,0.75) 0%, rgba(120,0,0,0.55) 60%, rgba(60,0,0,0.85) 100%);
+    opacity: 0;
+    pointer-events: none; z-index: 89;
+  }
+  #redFlash.on { animation: redFlashAnim 0.5s; }
+  @keyframes redFlashAnim {
+    0% { opacity: 0.9; }
+    100% { opacity: 0; }
+  }
+  .popup {
+    position: absolute;
+    color: #ffd54f; font-weight: bold;
+    font-size: 38px;
+    pointer-events: none;
+    text-shadow: 0 3px 0 #7b241c, 0 5px 12px #000, 0 0 20px currentColor;
+    animation: floatUp 1.1s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+    z-index: 95;
+    font-family: 'Arial Black', Arial, sans-serif;
+    letter-spacing: 1px;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(0.5) rotate(-8deg); }
+    20% { opacity: 1; transform: translateY(-14px) scale(1.4) rotate(4deg); }
+    100% { opacity: 0; transform: translateY(-110px) scale(1) rotate(-4deg); }
+  }
+  .spark {
+    position: absolute;
+    width: 8px; height: 8px;
+    background: #ffd54f;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 96;
+    box-shadow: 0 0 12px #ffd54f, 0 0 24px #ff9800;
+    animation: sparkFly 0.7s ease-out forwards;
+  }
+  @keyframes sparkFly {
+    0% { opacity: 1; transform: translate(0,0) scale(1.5); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.2); }
+  }
+  @keyframes screenShake {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-12px, 8px); }
+    25% { transform: translate(10px, -6px); }
+    40% { transform: translate(-8px, 4px); }
+    55% { transform: translate(6px, -3px); }
+    70% { transform: translate(-4px, 2px); }
+    85% { transform: translate(2px, -1px); }
+  }
+  #scene.shake {
+    animation: screenShake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+  @keyframes headShake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    15% { transform: translate(28px, -8px) rotate(13deg); }
+    32% { transform: translate(-24px, 6px) rotate(-11deg); }
+    50% { transform: translate(16px, -4px) rotate(7deg); }
+    68% { transform: translate(-10px, 3px) rotate(-4deg); }
+    85% { transform: translate(5px, -1px) rotate(2deg); }
+  }
+  .opponent-head.shake {
+    animation: headShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+  @keyframes bodyRecoil {
+    0%   { transform: translateY(-12%) translateX(0) rotate(0); }
+    35%  { transform: translateY(-12%) translateX(30px) rotate(4deg); }
+    100% { transform: translateY(-12%) translateX(0) rotate(0); }
+  }
+  #opponent.recoil {
+    animation: bodyRecoil 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+  @keyframes bruiseAppear {
+    0% { opacity: 0; transform: scale(0.3); }
+    50% { opacity: 0.9; transform: scale(1.2); }
+    100% { opacity: 0.85; transform: scale(1); }
+  }
+  .bruise.appearing { animation: bruiseAppear 0.5s forwards; }
+  .swell.appearing { animation: bruiseAppear 0.6s forwards; }
+
+  .flying-tooth {
+    position: absolute;
+    width: 16px;
+    height: 20px;
+    background: linear-gradient(180deg, #ffffff 0%, #e8e0d0 100%);
+    border: 2.5px solid #2a1a0e;
+    border-radius: 6px 6px 3px 3px;
+    z-index: 97;
+    pointer-events: none;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+    animation: toothFly var(--dur, 1.4s) cubic-bezier(0.2, 0.5, 0.4, 1) forwards;
+  }
+  .flying-tooth::after {
+    content: '';
+    position: absolute;
+    bottom: -6px; left: 20%; right: 20%;
+    height: 8px;
+    background: linear-gradient(180deg, #f0e0c0, #c9a878);
+    border-radius: 0 0 4px 4px;
+    border: 2px solid #2a1a0e;
+    border-top: none;
+  }
+  .flying-tooth::before {
+    content: '';
+    position: absolute;
+    top: 3px; left: 20%; right: 20%;
+    height: 5px;
+    background: #c0392b;
+    border-radius: 50%;
+    opacity: 0.7;
+  }
+  @keyframes toothFly {
+    0% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+    25% { opacity: 1; transform: translate(calc(var(--tx) * 0.3), calc(var(--ty) * 0.7)) rotate(180deg) scale(1.1); }
+    60% { opacity: 1; transform: translate(calc(var(--tx) * 0.7), var(--ty)) rotate(420deg) scale(1); }
+    100% { opacity: 0; transform: translate(var(--tx), calc(var(--ty) + 180px)) rotate(720deg) scale(0.6); }
+  }
+  .spit {
+    position: absolute;
+    width: 6px; height: 6px;
+    background: radial-gradient(circle, #fff, rgba(200,220,255,0.6));
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 96;
+    box-shadow: 0 0 6px rgba(255,255,255,0.7);
+    animation: spitFly 0.8s ease-out forwards;
+  }
+  @keyframes spitFly {
+    0% { opacity: 1; transform: translate(0,0) scale(1.2); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
+  }
+
+  #scoreboard {
+    position: absolute; top: 12px; left: 12px;
+    padding: 8px 14px;
+    background: rgba(20,10,40,0.85);
+    border-radius: 12px; color: #fff; font-size: 13px; font-weight: bold;
+    z-index: 50; line-height: 1.4; backdrop-filter: blur(4px);
+    border: 3px solid #ffd54f;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  }
+
+  .fan-emoji {
+    position: absolute;
+    font-size: 28px;
+    z-index: 30;
+    pointer-events: none;
+    animation: fanEmojiFloat 2s ease-out forwards;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+  }
+  @keyframes fanEmojiFloat {
+    0% { opacity: 1; transform: translateY(0) scale(0.6) rotate(-10deg); }
+    30% { opacity: 1; transform: translateY(-30px) scale(1.2) rotate(5deg); }
+    100% { opacity: 0; transform: translateY(-120px) scale(0.9) rotate(-5deg); }
+  }
+
+  /* МОБИЛЬНАЯ ОПТИМИЗАЦИЯ */
+  @media (max-width: 560px) {
+    /* Счёт всегда поверх игры и хорошо читается на маленьком экране */
+    #scoreboard {
+      position: fixed;
+      top: max(8px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      width: max-content;
+      min-width: 190px;
+      padding: 8px 16px;
+      font-size: 19px;
+      line-height: 1.15;
+      text-align: center;
+      border-width: 2px;
+      border-radius: 14px;
+      z-index: 300;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      box-shadow: 0 3px 8px rgba(0,0,0,.45);
+    }
+    #scoreboard span { font-size: 25px; }
+
+    /* Меньше постоянных CSS-анимаций и дорогих эффектов */
+    #spotlights .spotlight { animation: none; opacity: .45; }
+    #stands .fan { animation: none; }
+    #stage-haze { opacity: .35; }
+    #scene.shake { animation-duration: .32s; }
+    #scene { will-change: auto; }
+    .fan-emoji { animation-duration: 1.2s; }
+    #flash, #redFlash { will-change: opacity; }
+    .popup { animation-duration: .75s; }
+
+    #panel { padding: 10px; }
+    #hitBtn { padding: 13px; font-size: 17px; }
+    .zone { font-size: 9px; }
+    #statusLabel { font-size: 13px; }
+    #opponentWrap { width: 68vw; height: 68vw; max-height: 36vh; }
+    #myArm, #enemyArm { height: 90px; }
+    .my-hand-rest { width: 28vw; height: 18vw; }
+    .op-torso { width: 62vw; height: 20vw; }
+    #banner { font-size: 13px; padding: 4px 18px; letter-spacing: 2px; }
+    .fan { width: 24px; height: 24px; }
+    .fan .fan-head { width: 14px; height: 14px; bottom: 8px; }
+    .fan .fan-body { width: 16px; height: 10px; }
+    #myCodeDisplay { font-size: 24px; letter-spacing: 4px; }
+    #menuBtnSmall { font-size: 11px; padding: 6px 10px; }
+    #mainMenu h1 { font-size: 34px; }
+    .menu-btn { padding: 14px 18px; font-size: 15px; }
+  }
+  @media (max-height: 700px) {
+    #opponentWrap { max-height: 34vh; }
+    .op-torso { height: 16vw; max-height: 80px; }
+    #panel { padding: 8px 12px; gap: 5px; }
+    #powerBar { height: 34px; }
+    #hitBtn { padding: 10px; font-size: 15px; }
+    #stands { height: 28%; }
+  }
+</style>
+</head>
+<body>
+<div id="game">
+
+  <!-- ГЛАВНОЕ МЕНЮ -->
+  <div id="mainMenu">
+    <h1>SLAP ARENA</h1>
+    <div class="subtitle">СОРЕВНОВАНИЯ ПО ПОЩЁЧИНАМ</div>
+    <button class="menu-btn green" id="btnVsBot">🤖 ПРОТИВ КОМПЬЮТЕРА</button>
+    <button class="menu-btn blue" id="btnOnline">🌐 ИГРАТЬ ОНЛАЙН</button>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО ONLINE -->
+  <div id="onlineModal">
+    <div id="onlineBox">
+      <h2 id="onlineTitle">ОНЛАЙН ИГРА</h2>
+
+      <div id="onlineChoose">
+        <p>Создай комнату и отправь другу <b>код</b> или <b>ссылку</b>.<br>
+        Либо введи код друга чтобы присоединиться.</p>
+        <div class="row">
+          <button class="menu-btn green" id="btnCreateRoom">СОЗДАТЬ</button>
+          <button class="menu-btn blue" id="btnJoinRoom">ВОЙТИ</button>
+        </div>
+        <div class="row" style="margin-top:14px;">
+          <button class="menu-btn" id="btnCloseOnline" style="padding:10px;font-size:14px;">НАЗАД</button>
+        </div>
+      </div>
+
+      <div id="onlineHosting" style="display:none;">
+        <p>Отправь другу этот код или ссылку:</p>
+        <div id="myCodeDisplay">------</div>
+        <div id="shareLinkBox" title="Нажми чтобы скопировать">—</div>
+        <p style="font-size:12px;opacity:0.7;margin-top:8px;"><span class="spinner"></span>Ожидание подключения...</p>
+        <div class="row">
+          <button class="menu-btn purple" id="btnCopyLink" style="padding:10px;font-size:13px;">📋 СКОПИРОВАТЬ</button>
+          <button class="menu-btn" id="btnCancelHost" style="padding:10px;font-size:13px;">ОТМЕНА</button>
+        </div>
+      </div>
+
+      <div id="onlineJoining" style="display:none;">
+        <p>Введи код комнаты друга:</p>
+        <input type="text" id="roomCodeInput" placeholder="ABC123" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <div class="row">
+          <button class="menu-btn green" id="btnConfirmJoin">ВОЙТИ</button>
+          <button class="menu-btn" id="btnCancelJoin" style="padding:10px;font-size:14px;">ОТМЕНА</button>
+        </div>
+      </div>
+
+      <div id="onlineStatus"></div>
+    </div>
+  </div>
+
+  <!-- ИГРОВАЯ СЦЕНА -->
+  <div id="scene">
+    <div id="stage-back"></div>
+    <div id="spotlights">
+      <div class="spotlight s1"></div>
+      <div class="spotlight s2"></div>
+      <div class="spotlight s3"></div>
+      <div class="spotlight s4"></div>
+    </div>
+    <div id="stands"></div>
+    <div id="banner">SLAP ARENA</div>
+    <div id="stage-haze"></div>
+
+    <div id="opponent">
+      <div id="opponentWrap">
+        <div class="opponent-head" id="opponentHead">
+          <div class="hair"></div>
+          <div style="position:absolute; width:12%; height:22%; background:radial-gradient(ellipse,#e8b890,#c99a72); border:4px solid #2a1a0e; border-radius:50%; top:44%; left:-5%; z-index:2;"></div>
+          <div style="position:absolute; width:12%; height:22%; background:radial-gradient(ellipse,#e8b890,#c99a72); border:4px solid #2a1a0e; border-radius:50%; top:44%; right:-5%; z-index:2;"></div>
+
+          <div class="cheek left" id="cheekL"></div>
+          <div class="cheek right" id="cheekR"></div>
+
+          <div class="brow left" id="browL"></div>
+          <div class="brow right" id="browR"></div>
+
+          <div class="eye left" id="eyeL">
+            <div class="pupil"></div>
+            <div class="eyelid"></div>
+          </div>
+          <div class="eye right" id="eyeR">
+            <div class="pupil"></div>
+            <div class="eyelid"></div>
+          </div>
+
+          <div class="nose" id="nose"></div>
+
+          <div class="mouth" id="mouth">
+            <div class="teeth"></div>
+            <div class="teeth-bottom"></div>
+          </div>
+
+          <div class="bruise" id="bruise1"></div>
+          <div class="bruise" id="bruise2"></div>
+          <div class="bruise" id="bruise3"></div>
+          <div class="bruise" id="bruise4"></div>
+          <div class="bruise" id="bruise5"></div>
+
+          <div class="swell" id="swell1"></div>
+          <div class="swell" id="swell2"></div>
+          <div class="swell" id="swell3"></div>
+          <div class="swell" id="swell4"></div>
+
+          <div class="blood" id="blood1"></div>
+          <div class="blood" id="blood2"></div>
+          <div class="blood-drip" id="bloodDrip1"></div>
+          <div class="blood-drip" id="bloodDrip2"></div>
+        </div>
+      </div>
+
+      <div class="op-neck"></div>
+      <div class="op-torso"></div>
+
+      <div class="op-arm-left"></div>
+      <div class="op-arm-right"></div>
+
+      <div class="op-hand left">
+        <div class="op-finger f1"></div>
+        <div class="op-finger f2"></div>
+        <div class="op-finger f3"></div>
+        <div class="op-finger f4"></div>
+      </div>
+      <div class="op-hand right" id="opRightHand">
+        <div class="op-finger f1"></div>
+        <div class="op-finger f2"></div>
+        <div class="op-finger f3"></div>
+        <div class="op-finger f4"></div>
+      </div>
+    </div>
+
+    <div id="table"></div>
+
+    <div id="myHands">
+      <div class="my-hand-rest left">
+        <div class="my-finger f1"></div>
+        <div class="my-finger f2"></div>
+        <div class="my-finger f3"></div>
+        <div class="my-finger f4"></div>
+      </div>
+      <div class="my-hand-rest right" id="myRightHand">
+        <div class="my-finger f1"></div>
+        <div class="my-finger f2"></div>
+        <div class="my-finger f3"></div>
+        <div class="my-finger f4"></div>
+      </div>
+    </div>
+
+    <div id="myArm">
+      <div class="arm-forearm"></div>
+      <div class="arm-sleeve"></div>
+      <div class="arm-hand"></div>
+      <div class="arm-finger f1"></div>
+      <div class="arm-finger f2"></div>
+      <div class="arm-finger f3"></div>
+      <div class="arm-finger f4"></div>
+    </div>
+
+    <div id="enemyArm">
+      <div class="arm-forearm"></div>
+      <div class="arm-sleeve"></div>
+      <div class="arm-hand"></div>
+      <div class="arm-finger f1"></div>
+      <div class="arm-finger f2"></div>
+      <div class="arm-finger f3"></div>
+      <div class="arm-finger f4"></div>
+    </div>
+  </div>
+
+  <div id="scoreboard">ТЫ: <span id="playerScore" style="color:#5dade2">0</span> &nbsp;·&nbsp; ВРАГ: <span id="enemyScore" style="color:#ff6b5b">0</span></div>
+  <button id="menuBtnSmall">МЕНЮ</button>
+
+  <div id="panel">
+    <div id="statusLabel">ТВОЙ ХОД — жми в красной зоне!</div>
+    <div id="powerBar">
+      <div id="powerZones">
+        <div class="zone zone-weak">слабо</div>
+        <div class="zone zone-ok">ок</div>
+        <div class="zone zone-good">хорошо</div>
+        <div class="zone zone-perfect">ПЕРФЕКТ</div>
+        <div class="zone zone-good">хорошо</div>
+        <div class="zone zone-ok">ок</div>
+        <div class="zone zone-weak">слабо</div>
+      </div>
+      <div id="marker"></div>
+    </div>
+    <button id="hitBtn">УДАР!</button>
+  </div>
+
+  <div id="flash"></div>
+  <div id="redFlash"></div>
+
+  <div id="overlay">
+    <h1 id="overTitle">Игра окончена</h1>
+    <p id="overText"></p>
+    <div class="row">
+      <button id="restartBtn">ИГРАТЬ СНОВА</button>
+      <button id="menuBtn" class="blue">В МЕНЮ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ГЛОБАЛЬНОЕ СОСТОЯНИЕ
+   ============================================================ */
+const game = {
+  mode: 'bot',
+  isHost: false,
+  playerScore: 0,
+  enemyScore: 0,
+  turn: 'player',
+  markerPos: 0,
+  markerDir: 1,
+  markerSpeed: 0.018,
+  running: false,
+  canHit: false,
+  roundOver: false,
+  opponentDamage: { bruises: 0, swells: 0, blood: 0, teeth: 0 },
+  myDamage: { bruises: 0, swells: 0, blood: 0, teeth: 0 },
+};
+const WIN_SCORE = 30;
+
+/* ============================================================
+   АВТООПРЕДЕЛЕНИЕ: код из URL
+   Поддерживаем: #room=CODE, ?room=CODE, #CODE, ?code=CODE
+   ============================================================ */
+function parseRoomFromUrl() {
+  try {
+    // Проверяем hash: #room=CODE или #CODE
+    const hash = (window.location.hash || '').replace(/^#/, '');
+    if (hash) {
+      const m1 = hash.match(/^room[=:]([A-Z0-9]{4,8})$/i);
+      if (m1) return m1[1].toUpperCase();
+      const m2 = hash.match(/^([A-Z0-9]{4,8})$/i);
+      if (m2) return m2[1].toUpperCase();
+    }
+    // Проверяем query: ?room=CODE или ?code=CODE
+    const search = (window.location.search || '');
+    const m3 = search.match(/[?&](?:room|code)=([A-Z0-9]{4,8})/i);
+    if (m3) return m3[1].toUpperCase();
+  } catch(e) {}
+  return null;
+}
+
+/* ============================================================
+   СЕТЬ (PeerJS) — стабильное P2P-подключение
+   GitHub Pages используется только для загрузки игры.
+   PeerJS Cloud используется как signaling-сервер, а сама игра
+   идёт напрямую между браузерами через WebRTC.
+   ============================================================ */
+let peer = null;
+let conn = null;
+let myRoomCode = '';
+let connectionTimeoutHandle = null;
+let isConnecting = false;
+let networkReady = false;
+let networkRole = null;
+let gameStartedByNetwork = false;
+let networkSessionId = '';
+let urlAutoJoinStarted = false;
+
+const PEER_PREFIX = 'slap-arena-v4-';
+const NETWORK_TIMEOUT = 25000;
+
+const ICE_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' }
+  ],
+  sdpSemantics: 'unified-plan'
+};
+
+function generateRoomCode() {
+  // 8 символов заметно уменьшают вероятность коллизии фиксированного Peer ID.
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function peerIdFromCode(code) {
+  return PEER_PREFIX + String(code).toUpperCase();
+}
+
+function clearConnectionTimeout() {
+  if (connectionTimeoutHandle) {
+    clearTimeout(connectionTimeoutHandle);
+    connectionTimeoutHandle = null;
+  }
+}
+
+function destroyNetwork() {
+  clearConnectionTimeout();
+  isConnecting = false;
+  networkReady = false;
+  gameStartedByNetwork = false;
+  networkRole = null;
+  networkSessionId = '';
+
+  if (conn) {
+    try { conn.close(); } catch (e) {}
+  }
+  conn = null;
+
+  if (peer) {
+    try { peer.destroy(); } catch (e) {}
+  }
+  peer = null;
+}
+
+function setNetworkTimeout(message) {
+  clearConnectionTimeout();
+  connectionTimeoutHandle = setTimeout(() => {
+    if (!networkReady) {
+      isConnecting = false;
+      setOnlineStatus(message, 'error');
+    }
+  }, NETWORK_TIMEOUT);
+}
+
+function createPeer(id) {
+  return new Peer(id, {
+    debug: 1,
+    reliable: true,
+    config: ICE_CONFIG
+  });
+}
+
+/* Хост: создаём комнату с фиксированным Peer ID. */
+function createHostPeer(code, onReady, onError) {
+  destroyNetwork();
+
+  const targetId = peerIdFromCode(code);
+  networkRole = 'host';
+  myRoomCode = code;
+  networkSessionId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random();
+
+  peer = createPeer(targetId);
+
+  peer.on('open', (id) => {
+    console.log('[HOST] Peer открыт:', id);
+    isConnecting = true;
+    setNetworkTimeout('Слишком долго нет подключения. Проверьте ссылку/код и интернет.');
+    if (onReady) onReady(id);
+  });
+
+  peer.on('connection', (incoming) => {
+    console.log('[HOST] Входящее подключение:', incoming.peer);
+
+    // В комнате может быть только один соперник.
+    if (conn && conn.open) {
+      try { incoming.close(); } catch (e) {}
+      return;
+    }
+
+    conn = incoming;
+    bindConnection();
+  });
+
+  peer.on('error', (err) => {
+    console.error('[HOST] Peer error:', err);
+    let msg = 'Ошибка соединения: ' + (err.type || err.message || 'неизвестно');
+    if (err.type === 'unavailable-id') msg = 'Этот код комнаты уже занят. Создай новую комнату.';
+    if (err.type === 'network') msg = 'Не удалось связаться с PeerJS. Проверь интернет.';
+    if (err.type === 'browser-incompatible') msg = 'Браузер не поддерживает WebRTC.';
+    if (onError) onError(msg, err);
+  });
+
+  peer.on('disconnected', () => {
+    console.warn('[HOST] Потеряна связь с PeerJS Cloud');
+    // P2P-соединение при этом может продолжать жить.
+    if (!peer.destroyed && !peer.disconnected) return;
+    try { peer.reconnect(); } catch (e) {}
+  });
+}
+
+/* Клиент: создаём собственный Peer ID и подключаемся к комнате. */
+function createClientPeer(targetCode, onError) {
+  destroyNetwork();
+
+  networkRole = 'client';
+  networkSessionId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random();
+  isConnecting = true;
+
+  peer = createPeer();
+
+  peer.on('open', (myId) => {
+    const targetId = peerIdFromCode(targetCode);
+    console.log('[CLIENT] Мой Peer ID:', myId, '→', targetId);
+
+    const c = peer.connect(targetId, {
+      reliable: true,
+      serialization: 'json',
+      metadata: {
+        protocol: 'slap-arena',
+        version: 4,
+        sessionId: networkSessionId
+      }
+    });
+
+    conn = c;
+    bindConnection();
+    setNetworkTimeout('Не удалось подключиться. Проверь код и убедись, что друг оставил комнату открытой.');
+  });
+
+  peer.on('error', (err) => {
+    console.error('[CLIENT] Peer error:', err);
+    let msg = 'Ошибка соединения: ' + (err.type || err.message || 'неизвестно');
+    if (err.type === 'peer-unavailable') msg = 'Комната не найдена. Проверь код — хост должен держать вкладку открытой.';
+    else if (err.type === 'network') msg = 'Проблема с интернетом или доступом к PeerJS Cloud.';
+    else if (err.type === 'server-error') msg = 'Сигнальный сервер PeerJS недоступен. Попробуй ещё раз.';
+    else if (err.type === 'browser-incompatible') msg = 'Браузер не поддерживает WebRTC.';
+    else if (err.type === 'webrtc') msg = 'WebRTC не смог установить P2P-соединение. Попробуйте другую сеть.';
+    if (onError) onError(msg, err);
+  });
+
+  peer.on('disconnected', () => {
+    console.warn('[CLIENT] Потеряна связь с PeerJS Cloud');
+    try { peer.reconnect(); } catch (e) {}
+  });
+}
+
+function bindConnection() {
+  if (!conn) return;
+
+  const boundConnection = conn;
+
+  boundConnection.on('open', () => {
+    // Игнорируем старый объект соединения.
+    if (conn !== boundConnection) return;
+
+    clearConnectionTimeout();
+    isConnecting = false;
+    networkReady = true;
+    setOnlineStatus('✓ Соперник подключён. Подготовка игры...', 'ok');
+
+    // Важный момент: игра НЕ стартует просто от conn.open.
+    // Сначала делаем handshake, чтобы оба клиента гарантированно
+    // знали роль и начали раунд согласованно.
+    if (networkRole === 'client') {
+      sendNetwork({
+        type: 'hello',
+        protocol: 'slap-arena',
+        version: 4,
+        sessionId: networkSessionId
+      });
+    }
+  });
+
+  boundConnection.on('data', (data) => {
+    if (conn !== boundConnection) return;
+    console.log('[NET ←]', data);
+    handleNetworkData(data);
+  });
+
+  boundConnection.on('close', () => {
+    if (conn !== boundConnection) return;
+    console.log('[NET] Соединение закрыто');
+    networkReady = false;
+    isConnecting = false;
+
+    if (game.mode === 'online' && game.running && !game.roundOver) {
+      overTitle.textContent = '⚠️ СОПЕРНИК ОТКЛЮЧИЛСЯ';
+      overText.textContent = 'Соединение с соперником потеряно.';
+      overlay.classList.add('show');
+      game.running = false;
+      game.canHit = false;
+      hitBtn.disabled = true;
+    }
+  });
+
+  boundConnection.on('error', (err) => {
+    console.error('[NET] Connection error:', err);
+    if (!networkReady) {
+      setOnlineStatus('Ошибка P2P-соединения. Попробуйте подключиться ещё раз.', 'error');
+    }
+  });
+}
+
+function sendNetwork(data) {
+  if (!conn || !conn.open) return false;
+  try {
+    conn.send(data);
+    return true;
+  } catch (e) {
+    console.error('[NET →] Ошибка отправки:', e);
+    return false;
+  }
+}
+
+function beginOnlineGame() {
+  if (gameStartedByNetwork) return;
+  if (!networkReady || !conn || !conn.open) return;
+
+  gameStartedByNetwork = true;
+  game.mode = 'online';
+  game.isHost = networkRole === 'host';
+  closeOnlineModal();
+  mainMenu.style.display = 'none';
+  doResetGame();
+}
+
+function handleNetworkData(data) {
+  if (!data || typeof data !== 'object' || !data.type) return;
+
+  switch (data.type) {
+    case 'hello':
+      // Только хост запускает матч. Это устраняет рассинхрон при
+      // разной скорости загрузки двух вкладок.
+      if (networkRole === 'host' && networkReady) {
+        sendNetwork({
+          type: 'start',
+          protocol: 'slap-arena',
+          version: 4,
+          hostStarts: true,
+          sessionId: networkSessionId
+        });
+        beginOnlineGame();
+      }
+      break;
+
+    case 'start':
+      if (networkRole === 'client') {
+        beginOnlineGame();
+      }
+      break;
+
+    case 'hit':
+      if (game.mode !== 'online' || !game.running || game.roundOver) return;
+      // Клиентские данные принимаются только когда сейчас действительно
+      // ход соперника. Это защищает от двойных/запаздывающих пакетов.
+      if (game.turn !== 'enemy') return;
+      receiveOpponentHit(data.power, data.points, data.zoneName);
+      break;
+
+    case 'restart':
+      if (game.mode === 'online' && networkReady) {
+        doResetGame();
+      }
+      break;
+
+    case 'ping':
+      sendNetwork({ type: 'pong', t: data.t });
+      break;
+
+    case 'pong':
+      break;
+  }
+}
+
+/* ============================================================
+   UI МЕНЮ
+   ============================================================ */
+const mainMenu = document.getElementById('mainMenu');
+const onlineModal = document.getElementById('onlineModal');
+const onlineChoose = document.getElementById('onlineChoose');
+const onlineHosting = document.getElementById('onlineHosting');
+const onlineJoining = document.getElementById('onlineJoining');
+const onlineStatus = document.getElementById('onlineStatus');
+const myCodeDisplay = document.getElementById('myCodeDisplay');
+const shareLinkBox = document.getElementById('shareLinkBox');
+const roomCodeInput = document.getElementById('roomCodeInput');
+
+function setOnlineStatus(text, kind) {
+  onlineStatus.innerHTML = text || '';
+  onlineStatus.className = kind || '';
+}
+
+function showOnlineChoose() {
+  onlineChoose.style.display = 'block';
+  onlineHosting.style.display = 'none';
+  onlineJoining.style.display = 'none';
+  setOnlineStatus('');
+}
+function showOnlineHosting(code) {
+  onlineChoose.style.display = 'none';
+  onlineHosting.style.display = 'block';
+  onlineJoining.style.display = 'none';
+  myCodeDisplay.textContent = code;
+  const link = buildShareLink(code);
+  shareLinkBox.textContent = link;
+  shareLinkBox.dataset.link = link;
+  setOnlineStatus('');
+}
+function showOnlineJoining(prefill) {
+  onlineChoose.style.display = 'none';
+  onlineHosting.style.display = 'none';
+  onlineJoining.style.display = 'block';
+  roomCodeInput.value = prefill || '';
+  setOnlineStatus('');
+  setTimeout(() => roomCodeInput.focus(), 150);
+}
+function openOnlineModal() {
+  onlineModal.classList.add('show');
+  showOnlineChoose();
+}
+function closeOnlineModal() {
+  onlineModal.classList.remove('show');
+  setOnlineStatus('');
+}
+
+function buildShareLink(code) {
+  const loc = window.location;
+  return loc.origin + loc.pathname + '#room=' + code;
+}
+
+document.getElementById('btnVsBot').addEventListener('click', () => {
+  ensureAudio();
+  game.mode = 'bot';
+  game.isHost = false;
+  mainMenu.style.display = 'none';
+  if (window.location.hash || window.location.search) {
+    try { history.replaceState(null, '', window.location.pathname); } catch(e){}
+  }
+  doResetGame();
+});
+
+document.getElementById('btnOnline').addEventListener('click', () => {
+  ensureAudio();
+  openOnlineModal();
+});
+
+document.getElementById('btnCloseOnline').addEventListener('click', () => {
+  closeOnlineModal();
+});
+
+/* СОЗДАТЬ */
+document.getElementById('btnCreateRoom').addEventListener('click', () => {
+  ensureAudio();
+  setOnlineStatus('<span class="spinner"></span>Создание комнаты...');
+  game.isHost = true;
+
+  const tryCreate = (attempt) => {
+    const code = generateRoomCode();
+    myRoomCode = code;
+    createHostPeer(code, (openedId) => {
+      console.log('Комната создана:', code);
+      showOnlineHosting(code);
+      try { history.replaceState(null, '', '#room=' + code); } catch(e){}
+    }, (msg, err) => {
+      if (err && err.type === 'unavailable-id' && attempt < 3) {
+        setTimeout(() => tryCreate(attempt + 1), 300);
+        return;
+      }
+      setOnlineStatus('Ошибка: ' + msg, 'error');
+    });
+  };
+  tryCreate(0);
+});
+
+document.getElementById('btnCancelHost').addEventListener('click', () => {
+  if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
+  conn = null;
+  isConnecting = false;
+  if (connectionTimeoutHandle) { clearTimeout(connectionTimeoutHandle); connectionTimeoutHandle = null; }
+  try { history.replaceState(null, '', window.location.pathname); } catch(e){}
+  showOnlineChoose();
+});
+
+/* Копировать */
+document.getElementById('btnCopyLink').addEventListener('click', () => {
+  const link = shareLinkBox.dataset.link || shareLinkBox.textContent;
+  if (!link) return;
+  const done = () => setOnlineStatus('✓ Ссылка скопирована!', 'ok');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(done).catch(() => {
+      fallbackCopy(link, done);
+    });
+  } else {
+    fallbackCopy(link, done);
+  }
+});
+function fallbackCopy(text, done) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    done();
+  } catch(e) {
+    setOnlineStatus('Не удалось скопировать', 'error');
+  }
+}
+shareLinkBox.addEventListener('click', () => {
+  document.getElementById('btnCopyLink').click();
+});
+
+/* ВОЙТИ */
+document.getElementById('btnJoinRoom').addEventListener('click', () => {
+  ensureAudio();
+  showOnlineJoining();
+});
+
+document.getElementById('btnCancelJoin').addEventListener('click', () => {
+  urlAutoJoinStarted = false;
+  destroyNetwork();
+  showOnlineChoose();
+});
+
+document.getElementById('btnConfirmJoin').addEventListener('click', () => {
+  const code = (roomCodeInput.value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length < 4) {
+    setOnlineStatus('Введи корректный код (мин. 4 символа)', 'error');
+    return;
+  }
+  setOnlineStatus('<span class="spinner"></span>Подключение к ' + code + '...');
+  game.isHost = false;
+  createClientPeer(code, (msg) => {
+    setOnlineStatus('Ошибка: ' + msg, 'error');
+  });
+});
+
+roomCodeInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('btnConfirmJoin').click();
+  if (e.key === 'Escape') document.getElementById('btnCancelJoin').click();
+});
+
+/* ============================================================
+   АВТОПОДКЛЮЧЕНИЕ ПО ССЫЛКЕ
+   ============================================================ */
+function autoJoinFromUrl() {
+  const code = parseRoomFromUrl();
+  if (!code || urlAutoJoinStarted) return false;
+
+  urlAutoJoinStarted = true;
+  console.log('[AUTO] Автоподключение по ссылке:', code);
+  mainMenu.style.display = 'flex';
+  openOnlineModal();
+  showOnlineJoining(code);
+  setOnlineStatus('<span class=\"spinner\"></span>Подключаемся к комнате ' + code + '...', 'ok');
+  game.isHost = false;
+
+  createClientPeer(code, (msg) => {
+    urlAutoJoinStarted = false;
+    setOnlineStatus('Ошибка: ' + msg + '<br>Можно ввести код вручную.', 'error');
+  });
+
+  return true;
+}
+
+// Проверяем URL сразу и при изменении hash (например, если открыли ссылку в той же вкладке)
+window.addEventListener('hashchange', () => {
+  if (game.mode !== 'online') {
+    const code = parseRoomFromUrl();
+    if (code && !onlineModal.classList.contains('show')) {
+      autoJoinFromUrl();
+    }
+  }
+});
+
+/* МЕНЮ выход */
+document.getElementById('menuBtnSmall').addEventListener('click', () => {
+  if (game.mode === 'online' && conn && conn.open) {
+    if (!confirm('Выйти в меню? Соединение с соперником разорвётся.')) return;
+  }
+  returnToMenu();
+});
+
+document.getElementById('menuBtn').addEventListener('click', () => {
+  returnToMenu();
+});
+
+function returnToMenu() {
+  urlAutoJoinStarted = false;
+  game.running = false;
+  game.canHit = false;
+  game.roundOver = true;
+  overlay.classList.remove('show');
+  mainMenu.style.display = 'flex';
+  if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
+  conn = null;
+  isConnecting = false;
+  if (connectionTimeoutHandle) { clearTimeout(connectionTimeoutHandle); connectionTimeoutHandle = null; }
+  closeOnlineModal();
+  try { history.replaceState(null, '', window.location.pathname); } catch(e){}
+}
+
+/* ============================================================
+   ЗВУКИ
+   ============================================================ */
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playSlapSound(power) {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const bufferSize = Math.floor(audioCtx.sampleRate * 0.18);
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2.8);
+  }
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const nf = audioCtx.createBiquadFilter();
+  nf.type = 'bandpass';
+  nf.frequency.value = 650 + power * 1700;
+  nf.Q.value = 1.4;
+  const ng = audioCtx.createGain();
+  ng.gain.setValueAtTime(0.18 + power * 0.7, t);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  noise.connect(nf).connect(ng).connect(audioCtx.destination);
+  noise.start(t); noise.stop(t + 0.18);
+  if (power > 0.5) {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.exponentialRampToValueAtTime(40, t + 0.25);
+    g.gain.setValueAtTime((power - 0.5) * 0.8, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(t); osc.stop(t + 0.3);
+  }
+}
+function playApplauseSound(intensity) {
+  intensity = intensity || 1;
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const duration = 1.6 + Math.random() * 0.6;
+  const bufferSize = Math.floor(audioCtx.sampleRate * duration);
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  const clapCount = Math.floor(40 + intensity * 60);
+  for (let c = 0; c < clapCount; c++) {
+    const start = Math.floor(Math.random() * (bufferSize - 200));
+    const len = 100 + Math.floor(Math.random() * 200);
+    const amp = 0.25 + Math.random() * 0.5;
+    for (let i = 0; i < len && start + i < bufferSize; i++) {
+      data[start + i] += (Math.random() * 2 - 1) * amp * Math.pow(1 - i / len, 3);
+    }
+  }
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] += (Math.random() * 2 - 1) * 0.05;
+  }
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 1800;
+  filter.Q.value = 0.7;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.22 * intensity, t + 0.15);
+  gain.gain.setValueAtTime(0.22 * intensity, t + duration * 0.5);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+  noise.connect(filter).connect(gain).connect(audioCtx.destination);
+  noise.start(t); noise.stop(t + duration);
+}
+function playCheerWhistle() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(900, t);
+  osc.frequency.exponentialRampToValueAtTime(1600, t + 0.15);
+  osc.frequency.exponentialRampToValueAtTime(1200, t + 0.3);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.08, t + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.35);
+}
+function playPerfectSound() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  [523, 659, 784, 1046].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0, t + i * 0.05);
+    g.gain.linearRampToValueAtTime(0.15, t + i * 0.05 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.05 + 0.32);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(t + i * 0.05); osc.stop(t + i * 0.05 + 0.32);
+  });
+}
+function playIncomingSound(power) {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(120, t);
+  osc.frequency.exponentialRampToValueAtTime(35, t + 0.3);
+  g.gain.setValueAtTime(0.25 + power * 0.5, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.35);
+  if (power > 0.7) {
+    const ring = audioCtx.createOscillator();
+    const rg = audioCtx.createGain();
+    ring.type = 'sine';
+    ring.frequency.value = 2800 + Math.random() * 400;
+    rg.gain.setValueAtTime(0, t + 0.1);
+    rg.gain.linearRampToValueAtTime((power - 0.7) * 0.06, t + 0.2);
+    rg.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+    ring.connect(rg).connect(audioCtx.destination);
+    ring.start(t + 0.1); ring.stop(t + 1.2);
+  }
+}
+function playToothSound() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(1600, t);
+  osc.frequency.exponentialRampToValueAtTime(600, t + 0.15);
+  g.gain.setValueAtTime(0.12, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.15);
+}
+function crowdReaction(power) {
+  if (power < 0.5) return;
+  const intensity = power >= 0.9 ? 1 : (power >= 0.7 ? 0.7 : 0.5);
+  playApplauseSound(intensity);
+  if (power >= 0.85) {
+    setTimeout(() => playCheerWhistle(), 200);
+    setTimeout(() => playCheerWhistle(), 500);
+  }
+  const emojis = ['🔥','👏','😱','💥','🤯','⭐','👊','🙌'];
+  const count = isMobileDevice ? (power >= 0.9 ? 4 : (power >= 0.7 ? 3 : 1)) : (power >= 0.9 ? 10 : (power >= 0.7 ? 6 : 3));
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => spawnFanEmoji(emojis[Math.floor(Math.random() * emojis.length)]), i * 60);
+  }
+}
+function spawnFanEmoji(emoji) {
+  const el = document.createElement('div');
+  el.className = 'fan-emoji';
+  el.textContent = emoji;
+  el.style.left = (10 + Math.random() * 80) + '%';
+  el.style.top = (15 + Math.random() * 20) + '%';
+  document.getElementById('game').appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+}
+
+/* ============================================================
+   ЗРИТЕЛИ
+   ============================================================ */
+(function buildCrowd() {
+  const stands = document.getElementById('stands');
+  const skinTones = ['#f4c39a','#e8b890','#d9a878','#c99a72','#a87850','#8b6b48'];
+  const hairColors = ['#2a1a0e','#4a2a1a','#1a0f08','#6a4a2a','#8b6b48','#3a2a1a','#5a3a1a'];
+  const shirtColors = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e91e63','#ff5722','#ffc107'];
+  const rowsConfig = isMobileDevice ? [
+    { count: 14, y: 'back' },
+    { count: 12, y: 'mid' },
+    { count: 10, y: 'front' },
+  ] : [
+    { count: 28, y: 'back' },
+    { count: 24, y: 'mid' },
+    { count: 20, y: 'front' },
+  ];
+  rowsConfig.forEach(cfg => {
+    const row = document.createElement('div');
+    row.className = 'stand-row ' + cfg.y;
+    for (let i = 0; i < cfg.count; i++) {
+      const fan = document.createElement('div');
+      fan.className = 'fan';
+      fan.style.setProperty('--c-skin', skinTones[Math.floor(Math.random() * skinTones.length)]);
+      fan.style.setProperty('--c-hair', hairColors[Math.floor(Math.random() * hairColors.length)]);
+      fan.style.setProperty('--c-body', shirtColors[Math.floor(Math.random() * shirtColors.length)]);
+      fan.style.animationDelay = (Math.random() * 2.5) + 's';
+      fan.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+      if (cfg.y === 'back') fan.style.transform = `scale(${0.75 + Math.random() * 0.15})`;
+      else if (cfg.y === 'mid') fan.style.transform = `scale(${0.88 + Math.random() * 0.12})`;
+      else fan.style.transform = `scale(${0.95 + Math.random() * 0.15})`;
+      fan.innerHTML = `
+        <div class="fan-hair"></div>
+        <div class="fan-head">
+          <div class="fan-eye left"></div>
+          <div class="fan-eye right"></div>
+          <div class="fan-mouth"></div>
+        </div>
+        <div class="fan-body"></div>
+        <div class="fan-hand left"></div>
+        <div class="fan-hand right"></div>
+      `;
+      row.appendChild(fan);
+    }
+    stands.appendChild(row);
+  });
+})();
+
+/* ============================================================
+   DOM ССЫЛКИ
+   ============================================================ */
+const marker = document.getElementById('marker');
+const hitBtn = document.getElementById('hitBtn');
+const statusLabel = document.getElementById('statusLabel');
+const scene = document.getElementById('scene');
+const opponent = document.getElementById('opponent');
+const opponentHead = document.getElementById('opponentHead');
+const myArm = document.getElementById('myArm');
+const enemyArm = document.getElementById('enemyArm');
+const myHands = document.getElementById('myHands');
+const opRightHand = document.getElementById('opRightHand');
+const flash = document.getElementById('flash');
+const redFlash = document.getElementById('redFlash');
+const overlay = document.getElementById('overlay');
+const overTitle = document.getElementById('overTitle');
+const overText = document.getElementById('overText');
+const restartBtn = document.getElementById('restartBtn');
+const playerScoreSpan = document.getElementById('playerScore');
+const enemyScoreSpan = document.getElementById('enemyScore');
+const isMobileDevice = window.matchMedia('(max-width: 560px), (pointer: coarse)').matches;
+
+let barWidth = 0;
+function updateBarWidth() {
+  barWidth = document.getElementById('powerBar').clientWidth;
+}
+function positionMarker() {
+  marker.style.left = (game.markerPos * (barWidth - 8)) + 'px';
+}
+
+/* ============================================================
+   ANIMATION LOOP
+   ============================================================ */
+let lastTime = 0;
+function loop(time) {
+  if (!lastTime) lastTime = time;
+  const dt = Math.min(2.5, (time - lastTime) / 16.67);
+  lastTime = time;
+  if (game.running && game.canHit) {
+    game.markerPos += game.markerDir * game.markerSpeed * dt;
+    if (game.markerPos >= 1) { game.markerPos = 1; game.markerDir = -1; }
+    if (game.markerPos <= 0) { game.markerPos = 0; game.markerDir = 1; }
+    positionMarker();
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function getHitResult(pos) {
+  const zoneSize = 1 / 7;
+  const idx = Math.min(6, Math.floor(pos / zoneSize));
+  const zones = [
+    { name: 'слабо',   power: 0.15, points: 1  },
+    { name: 'ок',      power: 0.4,  points: 3  },
+    { name: 'хорошо',  power: 0.7,  points: 6  },
+    { name: 'ПЕРФЕКТ', power: 1.0,  points: 12 },
+    { name: 'хорошо',  power: 0.7,  points: 6  },
+    { name: 'ок',      power: 0.4,  points: 3  },
+    { name: 'слабо',   power: 0.15, points: 1  },
+  ];
+  return zones[idx];
+}
+
+/* ============================================================
+   ЭФФЕКТЫ
+   ============================================================ */
+function showPopup(x, y, text, color) {
+  const p = document.createElement('div');
+  p.className = 'popup';
+  p.textContent = text;
+  p.style.left = x + 'px';
+  p.style.top = y + 'px';
+  if (color) p.style.color = color;
+  document.getElementById('game').appendChild(p);
+  setTimeout(() => p.remove(), 1100);
+}
+function triggerFlash() {
+  flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on');
+}
+function triggerRedFlash() {
+  redFlash.classList.remove('on'); void redFlash.offsetWidth; redFlash.classList.add('on');
+}
+function spawnSparks(x, y, count) {
+  count = count || 10;
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement('div');
+    s.className = 'spark';
+    s.style.left = x + 'px';
+    s.style.top = y + 'px';
+    const a = (Math.PI * 2 * i) / count + Math.random() * 0.6;
+    const d = 50 + Math.random() * 70;
+    s.style.setProperty('--dx', Math.cos(a) * d + 'px');
+    s.style.setProperty('--dy', Math.sin(a) * d + 'px');
+    const sz = 5 + Math.random() * 9;
+    s.style.width = sz + 'px';
+    s.style.height = sz + 'px';
+    document.getElementById('game').appendChild(s);
+    setTimeout(() => s.remove(), 800);
+  }
+}
+function spawnSpit(x, y) {
+  for (let i = 0; i < (isMobileDevice ? 4 : 10); i++) {
+    const s = document.createElement('div');
+    s.className = 'spit';
+    s.style.left = x + 'px';
+    s.style.top = y + 'px';
+    const a = Math.random() * Math.PI * 2;
+    const d = 40 + Math.random() * 90;
+    s.style.setProperty('--dx', Math.cos(a) * d + 'px');
+    s.style.setProperty('--dy', Math.sin(a) * d + 'px');
+    document.getElementById('game').appendChild(s);
+    setTimeout(() => s.remove(), 850);
+  }
+}
+function spawnFlyingTooth(x, y) {
+  const tooth = document.createElement('div');
+  tooth.className = 'flying-tooth';
+  tooth.style.left = x + 'px';
+  tooth.style.top = y + 'px';
+  const tx = 120 + Math.random() * 120;
+  const ty = -100 - Math.random() * 80;
+  tooth.style.setProperty('--tx', tx + 'px');
+  tooth.style.setProperty('--ty', ty + 'px');
+  tooth.style.setProperty('--dur', (1.3 + Math.random() * 0.4) + 's');
+  document.getElementById('game').appendChild(tooth);
+  playToothSound();
+  setTimeout(() => tooth.remove(), 1800);
+}
+
+function getOpponentFaceCenter() {
+  const r = document.getElementById('opponentWrap').getBoundingClientRect();
+  const g = document.getElementById('game').getBoundingClientRect();
+  return {
+    x: r.left - g.left + r.width * 0.5,
+    y: r.top - g.top + r.height * 0.55,
+    rightCheekX: r.left - g.left + r.width * 0.72,
+    leftCheekX: r.left - g.left + r.width * 0.28,
+    mouthX: r.left - g.left + r.width * 0.5,
+    mouthY: r.top - g.top + r.height * 0.78,
+  };
+}
+
+function animateMyArm(onImpact) {
+  myHands.classList.add('punching');
+  myArm.classList.remove('slap');
+  void myArm.offsetWidth;
+  myArm.classList.add('slap');
+  setTimeout(() => { if (onImpact) onImpact(); }, 400);
+  setTimeout(() => { myHands.classList.remove('punching'); }, 1200);
+}
+function animateEnemyArm(onImpact) {
+  opRightHand.style.transform = 'rotate(10deg) translateY(-150%) translateX(-20%) scale(0.9)';
+  opRightHand.style.opacity = '0';
+  enemyArm.classList.remove('slap');
+  void enemyArm.offsetWidth;
+  enemyArm.classList.add('slap');
+  setTimeout(() => { if (onImpact) onImpact(); }, 420);
+  setTimeout(() => {
+    opRightHand.style.transform = '';
+    opRightHand.style.opacity = '';
+  }, 1300);
+}
+
+/* ============================================================
+   УРОН
+   ============================================================ */
+function applyDamageToOpponent(power, hitSide) {
+  const d = game.opponentDamage;
+  opponentHead.classList.remove('shake');
+  void opponentHead.offsetWidth;
+  opponentHead.classList.add('shake');
+  opponent.classList.remove('recoil');
+  void opponent.offsetWidth;
+  opponent.classList.add('recoil');
+
+  if (power >= 0.5) {
+    document.getElementById('eyeL').classList.add('closed');
+    document.getElementById('eyeR').classList.add('closed');
+    setTimeout(() => {
+      document.getElementById('eyeL').classList.remove('closed');
+      document.getElementById('eyeR').classList.remove('closed');
+    }, 500);
+  }
+  const mouth = document.getElementById('mouth');
+  mouth.classList.add('open');
+  setTimeout(() => mouth.classList.remove('open'), 700);
+
+  document.getElementById('browL').classList.add('angry');
+  document.getElementById('browR').classList.add('angry');
+  setTimeout(() => {
+    document.getElementById('browL').classList.remove('angry');
+    document.getElementById('browR').classList.remove('angry');
+  }, 800);
+
+  const cheekL = document.getElementById('cheekL');
+  const cheekR = document.getElementById('cheekR');
+  if (hitSide === 'right') cheekR.classList.add('hit');
+  else if (hitSide === 'left') cheekL.classList.add('hit');
+  else { cheekL.classList.add('hit'); cheekR.classList.add('hit'); }
+
+  if (power >= 0.35 && d.bruises < 5) {
+    d.bruises++;
+    const b = document.getElementById('bruise' + d.bruises);
+    const positions = [
+      { top: '52%', left: '62%', w: '22%', h: '18%' },
+      { top: '50%', left: '16%', w: '22%', h: '18%' },
+      { top: '32%', left: '68%', w: '18%', h: '15%' },
+      { top: '68%', left: '30%', w: '20%', h: '14%' },
+      { top: '36%', left: '12%', w: '18%', h: '14%' },
+    ];
+    const p = positions[d.bruises - 1];
+    b.style.top = p.top; b.style.left = p.left;
+    b.style.width = p.w; b.style.height = p.h;
+    b.classList.add('show', 'appearing');
+    setTimeout(() => b.classList.remove('appearing'), 600);
+  }
+  if (power >= 0.7 && d.swells < 4) {
+    d.swells++;
+    const s = document.getElementById('swell' + d.swells);
+    const positions = [
+      { w: '32%', h: '28%', top: '44%', left: '60%' },
+      { w: '32%', h: '28%', top: '44%', left: '8%' },
+      { w: '40%', h: '22%', top: '24%', left: '30%' },
+      { w: '30%', h: '26%', top: '66%', left: '36%' },
+    ];
+    const p = positions[d.swells - 1];
+    s.style.width = p.w; s.style.height = p.h;
+    s.style.top = p.top; s.style.left = p.left;
+    s.classList.add('show', 'appearing');
+    setTimeout(() => s.classList.remove('appearing'), 700);
+  }
+  if (power >= 0.9 && d.blood < 2) {
+    d.blood++;
+    const b = document.getElementById('blood' + d.blood);
+    b.style.width = '8%'; b.style.height = '12%';
+    b.style.bottom = '28%';
+    b.style.left = d.blood === 1 ? '38%' : '54%';
+    b.classList.add('show');
+    const drip = document.getElementById('bloodDrip' + d.blood);
+    drip.style.left = d.blood === 1 ? '40%' : '56%';
+    drip.style.top = '38%';
+    drip.classList.add('show');
+  }
+  if (power >= 0.85) {
+    const face = getOpponentFaceCenter();
+    setTimeout(() => {
+      spawnFlyingTooth(face.mouthX - 8, face.mouthY - 10);
+    }, 80);
+  }
+  setTimeout(() => {
+    if (d.bruises < 2) {
+      cheekL.classList.remove('hit');
+      cheekR.classList.remove('hit');
+    }
+  }, 3000);
+}
+
+function applyDamageToMe(power) {
+  scene.classList.remove('shake');
+  void scene.offsetWidth;
+  scene.classList.add('shake');
+  triggerRedFlash();
+  if (!isMobileDevice) scene.style.filter = `blur(${Math.min(6, power * 6)}px) brightness(${Math.max(0.6, 1 - power * 0.35)})`;
+  if (!isMobileDevice) {
+    setTimeout(() => {
+      scene.style.transition = 'filter 0.6s';
+      scene.style.filter = '';
+      setTimeout(() => scene.style.transition = '', 600);
+    }, 250);
+  }
+  if (power >= 0.7) setTimeout(triggerRedFlash, 150);
+}
+
+/* ============================================================
+   ИГРА
+   ============================================================ */
+function playerHit() {
+  if (!game.canHit || game.turn !== 'player') return;
+  game.canHit = false;
+  hitBtn.disabled = true;
+
+  const result = getHitResult(game.markerPos);
+  const power = result.power;
+  const points = result.points;
+  playSlapSound(power);
+
+  animateMyArm(() => {
+    applyDamageToOpponent(power, 'right');
+    triggerFlash();
+    const face = getOpponentFaceCenter();
+    spawnSparks(face.rightCheekX, face.y, isMobileDevice ? Math.floor(3 + power * 5) : Math.floor(6 + power * 12));
+    spawnSpit(face.rightCheekX, face.y);
+    if (power >= 0.95) playPerfectSound();
+    const colorMap = {
+      'слабо': '#95a5a6','ок': '#2ecc71','хорошо': '#f1c40f','ПЕРФЕКТ': '#e74c3c',
+    };
+    showPopup(face.rightCheekX - 20, face.y - 60, '+' + points, colorMap[result.name]);
+    crowdReaction(power);
+  });
+
+  game.playerScore += points;
+  playerScoreSpan.textContent = game.playerScore;
+  statusLabel.textContent = `Ты попал: ${result.name} (+${points})`;
+
+  if (game.mode === 'online') {
+    sendNetwork({ type: 'hit', power, points, zoneName: result.name, from: 'player' });
+  }
+
+  if (checkWin()) return;
+
+  setTimeout(() => {
+    game.turn = 'enemy';
+    startTurn();
+  }, 1900);
+}
+
+function receiveOpponentHit(power, points, zoneName) {
+  if (game.mode !== 'online') return;
+  if (game.roundOver) return;
+
+  game.enemyScore += points;
+  enemyScoreSpan.textContent = game.enemyScore;
+
+  playIncomingSound(power);
+  animateEnemyArm(() => {
+    applyDamageToMe(power);
+    triggerFlash();
+    const cx = window.innerWidth * 0.5;
+    const cy = window.innerHeight * 0.42;
+    spawnSparks(cx, cy, isMobileDevice ? Math.floor(3 + power * 5) : Math.floor(6 + power * 12));
+    spawnSpit(cx, cy);
+    crowdReaction(power);
+  });
+
+  statusLabel.textContent = `Враг попал: ${zoneName} (+${points})`;
+
+  if (checkWin()) return;
+
+  setTimeout(() => {
+    game.turn = 'player';
+    startTurn();
+  }, 1900);
+}
+
+function botTurn() {
+  if (game.mode !== 'bot') return;
+  if (game.turn !== 'enemy' || game.roundOver) return;
+  game.canHit = false;
+
+  const skill = Math.min(0.8, 0.35 + game.playerScore / 200);
+  let pos = Math.random() < skill ? 0.43 + Math.random() * 0.14 : Math.random();
+  game.markerPos = pos;
+  positionMarker();
+
+  const result = getHitResult(pos);
+  const power = result.power;
+  const points = result.points;
+  playIncomingSound(power);
+
+  animateEnemyArm(() => {
+    applyDamageToMe(power);
+    triggerFlash();
+    const cx = window.innerWidth * 0.5;
+    const cy = window.innerHeight * 0.42;
+    spawnSparks(cx, cy, isMobileDevice ? Math.floor(3 + power * 5) : Math.floor(6 + power * 12));
+    spawnSpit(cx, cy);
+    crowdReaction(power);
+  });
+
+  game.enemyScore += points;
+  enemyScoreSpan.textContent = game.enemyScore;
+  statusLabel.textContent = `Враг попал: ${result.name} (+${points})`;
+
+  if (checkWin()) return;
+
+  setTimeout(() => {
+    game.turn = 'player';
+    startTurn();
+  }, 1900);
+}
+
+function startTurn() {
+  if (game.roundOver) return;
+  game.canHit = true;
+  game.markerPos = 0;
+  game.markerDir = 1;
+  positionMarker();
+
+  const totalScore = game.playerScore + game.enemyScore;
+  game.markerSpeed = 0.015 + Math.min(0.022, totalScore / 650);
+
+  if (game.turn === 'player') {
+    statusLabel.textContent = 'ТВОЙ ХОД — жми в красной зоне!';
+    hitBtn.disabled = false;
+    hitBtn.textContent = 'УДАР!';
+  } else {
+    statusLabel.textContent = 'ХОД ВРАГА...';
+    hitBtn.disabled = true;
+    hitBtn.textContent = 'ЖДИ...';
+    game.canHit = false;
+
+    if (game.mode === 'bot') {
+      setTimeout(() => {
+        if (game.turn === 'enemy' && !game.roundOver) botTurn();
+      }, 900 + Math.random() * 700);
+    }
+  }
+}
+
+function checkWin() {
+  if (game.playerScore >= WIN_SCORE || game.enemyScore >= WIN_SCORE) {
+    game.roundOver = true;
+    game.running = false;
+    game.canHit = false;
+    hitBtn.disabled = true;
+
+    if (game.playerScore >= WIN_SCORE) {
+      overTitle.textContent = '🏆 ПОБЕДА!';
+      overText.textContent = `Ты набрал ${game.playerScore} очков против ${game.enemyScore}. Соперник в нокауте!`;
+      playPerfectSound();
+      setTimeout(() => playApplauseSound(1.2), 300);
+      setTimeout(() => playCheerWhistle(), 700);
+    } else {
+      overTitle.textContent = '💀 ПОРАЖЕНИЕ';
+      overText.textContent = `Соперник набрал ${game.enemyScore} очков против ${game.playerScore}. Ты в нокауте...`;
+    }
+    setTimeout(() => overlay.classList.add('show'), 700);
+    return true;
+  }
+  return false;
+}
+
+function startOnlineGame() {
+  // Оставлено для совместимости со старым кодом. Реальный старт выполняется
+  // через beginOnlineGame() после handshake.
+  beginOnlineGame();
+}
+
+/* ============================================================
+   СБРОС
+   ============================================================ */
+function doResetGame() {
+  game.playerScore = 0;
+  game.enemyScore = 0;
+  game.markerPos = 0;
+  game.markerDir = 1;
+  game.running = true;
+  game.canHit = false;
+  game.roundOver = false;
+  game.opponentDamage = { bruises: 0, swells: 0, blood: 0, teeth: 0 };
+  game.myDamage = { bruises: 0, swells: 0, blood: 0, teeth: 0 };
+
+  if (game.mode === 'online') {
+    game.turn = game.isHost ? 'player' : 'enemy';
+  } else {
+    game.turn = 'player';
+  }
+
+  playerScoreSpan.textContent = '0';
+  enemyScoreSpan.textContent = '0';
+
+  document.querySelectorAll('.bruise, .swell, .blood, .blood-drip').forEach(el => {
+    el.classList.remove('show', 'appearing');
+    el.style.opacity = '';
+  });
+  document.querySelectorAll('.flying-tooth, .spit, .spark, .popup, .fan-emoji').forEach(el => el.remove());
+
+  document.getElementById('cheekL').classList.remove('hit');
+  document.getElementById('cheekR').classList.remove('hit');
+  document.getElementById('eyeL').classList.remove('closed', 'squint');
+  document.getElementById('eyeR').classList.remove('closed', 'squint');
+  document.getElementById('mouth').classList.remove('open', 'angry');
+  document.getElementById('browL').classList.remove('angry');
+  document.getElementById('browR').classList.remove('angry');
+  scene.classList.remove('shake');
+  scene.style.filter = '';
+  opponent.classList.remove('recoil');
+  myHands.classList.remove('punching');
+  opRightHand.style.transform = '';
+  opRightHand.style.opacity = '';
+
+  overlay.classList.remove('show');
+  updateBarWidth();
+  startTurn();
+}
+
+/* ============================================================
+   ОБРАБОТЧИКИ
+   ============================================================ */
+hitBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (game.turn === 'player' && game.canHit) playerHit();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.key === ' ') {
+    e.preventDefault();
+    if (game.turn === 'player' && game.canHit) playerHit();
+  }
+});
+scene.addEventListener('click', () => {
+  if (game.turn === 'player' && game.canHit) playerHit();
+});
+restartBtn.addEventListener('click', () => {
+  ensureAudio();
+  if (game.mode === 'online' && networkReady && conn && conn.open) {
+    sendNetwork({ type: 'restart' });
+    doResetGame();
+    return;
+  }
+  doResetGame();
+});
+window.addEventListener('resize', () => {
+  updateBarWidth();
+  positionMarker();
+});
+
+updateBarWidth();
+
+document.addEventListener('click', function unlockAudio() {
+  ensureAudio();
+  document.removeEventListener('click', unlockAudio);
+}, { once: true });
+
+/* ============================================================
+   СТАРТ: проверяем URL на код и автоподключаемся
+   ============================================================ */
+window.addEventListener('load', () => {
+  // Небольшая задержка чтобы DOM был точно готов
+  setTimeout(() => {
+    const code = parseRoomFromUrl();
+    if (code) {
+      console.log('[START] Найден код в URL:', code);
+      autoJoinFromUrl();
+    }
+  }, 200);
+});
+
+// Проверка сразу (на случай если load уже прошёл)
+if (document.readyState === 'complete') {
+  setTimeout(() => {
+    const code = parseRoomFromUrl();
+    if (code) autoJoinFromUrl();
+  }, 200);
+} else {
+  setTimeout(() => {
+    const code = parseRoomFromUrl();
+    if (code && !onlineModal.classList.contains('show')) {
+      autoJoinFromUrl();
+    }
+  }, 600);
+}
+
+window.addEventListener('beforeunload', () => {
+  try { destroyNetwork(); } catch (e) {}
+});
+</script>
+</body>
+</html>
