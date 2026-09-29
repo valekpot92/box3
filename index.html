@@ -1950,11 +1950,9 @@ function autoJoinFromUrl() {
 
 // Проверяем URL сразу и при изменении hash (например, если открыли ссылку в той же вкладке)
 window.addEventListener('hashchange', () => {
-  if (game.mode !== 'online') {
-    const code = parseRoomFromUrl();
-    if (code && !onlineModal.classList.contains('show')) {
-      autoJoinFromUrl();
-    }
+  const code = parseRoomFromUrl();
+  if (code && game.mode !== 'online') {
+    autoJoinFromUrl();
   }
 });
 
@@ -2725,30 +2723,29 @@ document.addEventListener('click', function unlockAudio() {
 /* ============================================================
    СТАРТ: проверяем URL на код и автоподключаемся
    ============================================================ */
-window.addEventListener('load', () => {
-  // Небольшая задержка чтобы DOM был точно готов
-  setTimeout(() => {
-    const code = parseRoomFromUrl();
-    if (code) {
-      console.log('[START] Найден код в URL:', code);
-      autoJoinFromUrl();
-    }
-  }, 200);
-});
+function bootFromRoomLink() {
+  const code = parseRoomFromUrl();
+  console.log('[START] URL:', window.location.href, 'ROOM:', code);
+  if (!code) return;
 
-// Проверка сразу (на случай если load уже прошёл)
-if (document.readyState === 'complete') {
-  setTimeout(() => {
-    const code = parseRoomFromUrl();
-    if (code) autoJoinFromUrl();
-  }, 200);
+  // Важно: сначала явно показываем онлайн-окно, затем запускаем PeerJS.
+  // Это надёжно работает и при прямом открытии GitHub Pages, и при переходе
+  // по ссылке из мессенджера/браузера.
+  try {
+    mainMenu.style.display = 'none';
+    onlineModal.classList.add('show');
+    showOnlineJoining(code);
+  } catch (e) {
+    console.error('[START] Не удалось открыть окно подключения:', e);
+  }
+
+  autoJoinFromUrl();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootFromRoomLink, { once: true });
 } else {
-  setTimeout(() => {
-    const code = parseRoomFromUrl();
-    if (code && !onlineModal.classList.contains('show')) {
-      autoJoinFromUrl();
-    }
-  }, 600);
+  setTimeout(bootFromRoomLink, 0);
 }
 
 window.addEventListener('beforeunload', () => {
